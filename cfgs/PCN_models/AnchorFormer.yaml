@@ -22,7 +22,7 @@ dataset : {
   test : { _base_: cfgs/dataset_configs/Mydata.yaml, 
             others: {subset: 'test'}}}
 model : {
-  NAME: AnchorFormer, num_pred: 16384, num_query: 256, knn_layer: 0, trans_dim: 384, num_encoder_blk: 8, num_decoder_blk: 6, sparse_expansion_lambda: 0.5, dense_expansion_lambda: 1.2}
+  NAME: AnchorFormer, num_pred: 2048, num_query: 256, knn_layer: 0, trans_dim: 384, num_encoder_blk: 8, num_decoder_blk: 6, sparse_expansion_lambda: 0.5, dense_expansion_lambda: 1.2}
 
 loss : {
   sparse_loss_weight: 1.0,
@@ -30,7 +30,7 @@ loss : {
   sparse_penalty_weight: 0.1,
   dense_penalty_weight: 0.05
 }
-total_bs : 128
+total_bs : 4
 step_per_update : 1
 max_epoch : 420
 

@@ -3,8 +3,13 @@ msgpack-numpy
 lmdb
 h5py
 easydict
+transforms3d
 open3d
 hydra-core==0.11.3
 pytorch-lightning==0.7.1
-
+timm
+ninja
 # ./models/pointnet2_ops_lib/.
+
+
+# pip install --upgrade https://github.com/unlimblue/KNN_CUDA/releases/download/0.2/KNN_CUDA-0.2-py3-none-any.whl
