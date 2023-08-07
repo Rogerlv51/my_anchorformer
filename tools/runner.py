@@ -264,14 +264,15 @@ def validate(base_model, test_dataloader, epoch, ChamferDisL1, ChamferDisL2, val
     msg += '#ModelName\t'
     print_log(msg, logger=logger)
 
-    for taxonomy_id in category_metrics:
-        msg = ''
-        msg += (taxonomy_id + '\t')
-        msg += (str(category_metrics[taxonomy_id].count(0)) + '\t')
-        for value in category_metrics[taxonomy_id].avg():
-            msg += '%.3f \t' % value
-        msg += shapenet_dict[taxonomy_id] + '\t'
-        print_log(msg, logger=logger)
+    # 自己的数据集不需要打印shapenet信息
+    # for taxonomy_id in category_metrics:
+    #     msg = ''
+    #     msg += (taxonomy_id + '\t')
+    #     msg += (str(category_metrics[taxonomy_id].count(0)) + '\t')
+    #     for value in category_metrics[taxonomy_id].avg():
+    #         msg += '%.3f \t' % value
+    #     msg += shapenet_dict[taxonomy_id] + '\t'
+    #     print_log(msg, logger=logger)
 
     msg = ''
     msg += 'Overall\t\t'
