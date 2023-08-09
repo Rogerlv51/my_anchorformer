@@ -30,7 +30,7 @@ class Attention(nn.Module):
         self.num_heads = num_heads
         head_dim = dim // num_heads
         # NOTE scale factor was wrong in my original version, can set manually to be compat with prev weights
-        self.scale = qk_scale or head_dim ** -0.5
+        self.scale = qk_scale or head_dim ** -0.5   # 理解为一个缩放因子即可
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
@@ -39,6 +39,7 @@ class Attention(nn.Module):
 
     def forward(self, x):
         B, N, C = x.shape
+        # 为了拆分成多头注意力机制做reshape操作，因为这里采用自注意力所以把qkv一起丢进一个mlp层即可
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]   # make torchscript happy (cannot use tensor as tuple)
 
@@ -51,7 +52,7 @@ class Attention(nn.Module):
         x = self.proj_drop(x)
         return x
 
-class CrossAttention(nn.Module):
+class CrossAttention(nn.Module):   # 多头交叉注意力模块
     def __init__(self, dim, out_dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0.):
         super().__init__()
         self.num_heads = num_heads
@@ -88,7 +89,7 @@ class CrossAttention(nn.Module):
         x = self.proj_drop(x)
         return x
 
-class GeoCrossAttention(nn.Module):
+class GeoCrossAttention(nn.Module):   # 与Pointr的区别是使用Geo的多头交叉注意力
     def __init__(self, dim, out_dim, num_heads=1, qkv_bias=False, qk_scale=1, attn_drop=0., proj_drop=0., aggregate_dim=16):
         super().__init__()
         self.num_heads = num_heads
@@ -158,7 +159,7 @@ class SubFold(nn.Module):
         fd2 = self.folding2(x)
         return fd2
 
-class EncoderBlock(nn.Module):
+class EncoderBlock(nn.Module):   # encoder部分参考了PoinTr但是有自己的dual attention block改进
     def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0., drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, num_pred=16, num_point=128):
         super().__init__()
 
@@ -188,19 +189,21 @@ class EncoderBlock(nn.Module):
             nn.Conv1d(64, 16, 1)
         )
         
-    def forward(self, x, coor):
-        norm_x = self.norm1(x)
-        x_1 = self.self_attn(norm_x)
-        x = x + self.drop_path(x_1)
-        x = x + self.drop_path(self.mlp(self.norm2(x))) # B N dim
+    def forward(self, x, coor): # 对照论文dual结构transformer看
+        norm_x = self.norm1(x)   # 输入做个层归一化处理
+        x_1 = self.self_attn(norm_x)  # 过多头自注意力模块
+        x = x + self.drop_path(x_1)   # 加一个正则化处理
+        x = x + self.drop_path(self.mlp(self.norm2(x))) # B N dim   对应文章残差连接
         
-        global_x = torch.max(x, dim=1, keepdim=False)[0] # B dim
+        # 部分对应公式gi = MaxPool(Xi), X′i = MLP (gi − Xi)
+        global_x = torch.max(x, dim=1, keepdim=False)[0] # B dim  提取全局特征
         diff_x = global_x.unsqueeze(1).repeat(1,self.num_point,1) - x
         x_2 = self.generate_feature(diff_x)
         
-        norm_k = self.norm_k(x) # B N dim
-        norm_q = self.norm_q(x_2) # B L dim
-        coor_2 = self.attn(q=norm_q, k=norm_k, v=coor) 
+        norm_k = self.norm_k(x) # B N dim   k直接就是直接残差连接输出的结果再归一化下
+        norm_q = self.norm_q(x_2) # B L dim  q实际上就是X'i加归一化
+        coor_2 = self.attn(q=norm_q, k=norm_k, v=coor)    # Geo多头交叉注意力
+        # 这里生成anchor的过程使用SubFold感觉看上去和FoldingNet差不多，这部分感觉文章中没有叙述
         coor_2 = self.generate_anchor(global_x, coor_2.transpose(1,2)).transpose(1,2)
         
         x = torch.cat([x, x_2], dim=1)        
@@ -316,15 +319,18 @@ class AnchorTransformer(nn.Module):
     def forward(self, inpc):
         '''
             inpc : input incomplete point cloud with shape B N(2048) C(3)
+            网络首先经过一个Transformer架构, 输入是残缺点云
         '''
         # build point feature
         bs = inpc.size(0)
+        # 这一步操作和AdapoinTr一模一样，直接抄的，得到中心点坐标和特征向量，使用DGCNN层
         coor, f = self.grouper(inpc.transpose(1,2).contiguous())
+        # 这里和AdapoinTr的区别是没有使用KNN
         pos =  self.pos_embed(coor).transpose(1,2)
         x = self.input_proj(f).transpose(1,2)
         coor = coor.transpose(1,2)
-        
-        # encoder
+         
+        # encoder 与Pointr的区别，在进encoder之前就进行位置编码
         x = x + pos
         for i, blk in enumerate(self.encoder): 
             # x, coor = blk(x+pos, coor)

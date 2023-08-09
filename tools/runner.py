@@ -337,7 +337,7 @@ def test(base_model, test_dataloader, ChamferDisL1, ChamferDisL2, test_writer, a
 
             npoints = config.dataset.test._base_.N_POINTS
             dataset_name = config.dataset.test._base_.NAME
-            if dataset_name == 'PCN':
+            if dataset_name == 'PCN' or dataset_name == 'Teeth':
                 partial = data[0].cuda()
                 gt = data[1].cuda()
                 
