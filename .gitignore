@@ -31,3 +31,5 @@ MANIFEST
 *.ply
 
 experiments/
+
+.vscode/
