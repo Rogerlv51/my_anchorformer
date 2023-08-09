@@ -203,7 +203,7 @@ class EncoderBlock(nn.Module):   # encoder部分参考了PoinTr但是有自己�
         norm_k = self.norm_k(x) # B N dim   k直接就是直接残差连接输出的结果再归一化下
         norm_q = self.norm_q(x_2) # B L dim  q实际上就是X'i加归一化
         coor_2 = self.attn(q=norm_q, k=norm_k, v=coor)    # Geo多头交叉注意力
-        # 这里生成anchor的过程使用SubFold感觉看上去和FoldingNet差不多，这部分感觉文章中没有叙述
+        # 这里生成anchor的过程使用SubFold和Pointr中使用的FoldingNet一模一样，只是换了个名字。。。
         coor_2 = self.generate_anchor(global_x, coor_2.transpose(1,2)).transpose(1,2)
         
         x = torch.cat([x, x_2], dim=1)        
