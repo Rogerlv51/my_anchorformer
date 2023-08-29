@@ -98,5 +98,5 @@ if __name__ == '__main__':
     logger = get_root_logger(log_file=log_file, name=args.log_name)
     config = get_config(args, logger = logger)
 
-    path = '2023-08-04_16_41_41-Teeth-33.ply'
+    path = '2023-08-04_16_41_40-Teeth-31.ply'
     test_net(args, config, path)

@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import transforms3d
+import math
 
 class Compose(object):
     def __init__(self, transforms):
@@ -18,6 +19,7 @@ class Compose(object):
             transform = tr['callback']
             objects = tr['objects']
             rnd_value = np.random.uniform(0, 1)
+            scale = np.random.uniform(1.0 / 2.0, 2)
             if transform.__class__ in [NormalizeObjectPose]:
                 data = transform(data)
             else:
@@ -27,6 +29,10 @@ class Compose(object):
                             RandomMirrorPoints
                         ]:
                             data[k] = transform(v, rnd_value)
+                        elif transform.__class__ in [
+                            RandomScalePoints
+                        ]:
+                            data[k] = transform(v, scale)                        
                         else:
                             data[k] = transform(v)
 
@@ -101,3 +107,27 @@ class NormalizeObjectPose(object):
 
         data[self.ptcloud_key] = ptcloud
         return data
+
+
+class RandomRotatePoints(object):
+    def __init__(self, parameters):
+        pass
+
+    def __call__(self, ptcloud, rnd_value):
+        trfm_mat = transforms3d.zooms.zfdir2mat(1)
+        angle = 2 * math.pi * rnd_value
+        trfm_mat = np.dot(transforms3d.axangles.axangle2mat([0, 1, 0], angle), trfm_mat)
+
+        ptcloud[:, :3] = np.dot(ptcloud[:, :3], trfm_mat.T)
+        return ptcloud
+
+
+class RandomScalePoints(object):
+    def __init__(self, parameters):
+        pass
+
+    def __call__(self, ptcloud, scale):
+        trfm_mat = transforms3d.zooms.zfdir2mat(1)
+        trfm_mat = np.dot(transforms3d.zooms.zfdir2mat(scale), trfm_mat)
+        ptcloud[:, :3] = np.dot(ptcloud[:, :3], trfm_mat.T)
+        return ptcloud

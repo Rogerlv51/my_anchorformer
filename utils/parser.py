@@ -31,7 +31,7 @@ def get_args():
     parser.add_argument('--exp_name', type = str, default='default', help = 'experiment name')
     parser.add_argument('--start_ckpts', type = str, default=None, help = 'reload used ckpt path')
     parser.add_argument('--ckpts', type = str, default=None, help = 'test used ckpt path')
-    parser.add_argument('--val_freq', type = int, default=5, help = 'val freq (epoch)')
+    parser.add_argument('--val_freq', type = int, default=3, help = 'val freq (epoch)')
     parser.add_argument('--val_interval', type = int, default=5, help = 'sampling interval for visualize')
     parser.add_argument('--test_interval', type = int, default=50, help = 'sampling interval for visualize')
     parser.add_argument(

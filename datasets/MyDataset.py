@@ -11,7 +11,17 @@ import json
 from .build import DATASETS
 from utils.logger import *
 import torch
-from FPS import farthest_point_sample
+import open3d as o3d
+
+def mesh_to_points(pc, nums):
+
+    # 加载网格文件
+    mesh = o3d.io.read_triangle_mesh(pc)
+    
+    # 根据网格的表面积进行采样
+    pcd = mesh.sample_points_uniformly(number_of_points=nums)
+
+    return np.array(pcd.points).astype(np.float32)
 
 
 @DATASETS.register_module()
@@ -44,6 +54,9 @@ class Teeth(data.Dataset):
                 'objects': ['partial']
             }, {
                 'callback': 'RandomMirrorPoints',
+                'objects': ['partial', 'gt']
+            },{
+                'callback': 'RandomScalePoints',
                 'objects': ['partial', 'gt']
             },{
                 'callback': 'ToTensor',
@@ -100,15 +113,14 @@ class Teeth(data.Dataset):
             file_path = sample['%s_path' % ri]
             if type(file_path) == list:
                 file_path = file_path[rand_idx]
-            data[ri] = IO.get(file_path).astype(np.float32)
+            
+            if ri == 'partial':
+                data[ri] = mesh_to_points(file_path, 4096)   # TEST：输入输出分开做处理
+            else:
+                data[ri] = mesh_to_points(file_path, 16384)
 
-            # 这里自己做归一化处理，为了和pcn数据集对齐
+            # 这里自己做归一化处理，为了和pcn数据集对齐 TEST：和shapenet对齐
             data[ri] = self._normalize(data[ri])
-            # 先采样到统一的点数
-            data[ri] = torch.from_numpy(data[ri])
-            # 注意在这里最远点采样，不能直接用pointnet的fps函数，因为支持cuda，而我们这里的数据是cpu的
-            data[ri] = farthest_point_sample(data[ri], 2048)
-            data[ri] = data[ri].numpy().astype(np.float32)
 
         assert data['gt'].shape[0] == self.npoints   # 这里判断，gt对应的点数必须和config里面规定的一致
 
